@@ -1,0 +1,240 @@
+SQOOP:
+======
+
+sqoop import --connect jdbc:mysql://ms.itversity.com/retail_db --username retail_user --password-file /user/chaitanyapolipalli/sqoop_password/sqoop.password --table products --warehouse-dir /user/chaitanyapolipalli/sqoop_practice --m 1 --compress --compression-codec org.apache.hadoop.io.compress.SnappyCodec --as-parquetfile
+
+sqoop import \
+--connect jdbc:mysql://ms.itversity.com/retail_db \
+--username retail_user \
+--password itversity \
+--table order_items \
+--columns order_item_id,order_item_order_id,order_item_subtotal \
+--warehouse-dir /user/chaitanyapolipalli/sqoop_practice \
+--m 1
+
+sqoop eval \
+--connect jdbc:mysql://ms.itversity.com/retail_db \
+--username retail_user \
+--password itversity \
+--query "describe products"
+
+sqoop import \
+--connect jdbc:mysql://ms.itversity.com/retail_db \
+--username retail_user \
+--password itversity \
+--table order_items \
+--columns order_item_id,order_item_order_id,order_item_subtotal \
+--warehouse-dir /user/chaitanyapolipalli/sqoop_practice \
+--m 1
+
+sqoop import \
+--connect jdbc:mysql://ms.itversity.com/retail_db \
+--username retail_user \
+--password itversity \
+--query "select order_id,order_date,order_customer_id,order_status,sum(order_item_subtotal) as Total_Revenue from orders o inner join order_items oi on o.order_id=oi.order_item_order_id and \$CONDITIONS group by order_id,order_date,order_customer_id,order_status" \
+--target-dir /user/chaitanyapolipalli/sqoop_practice/join_tables \
+--split-by order_id \
+--m 2
+
+sqoop import \
+--connect jdbc:mysql://ms.itversity.com/hr_db \
+--username hr_user \
+--password itversity \
+--table employees \
+--warehouse-dir /user/chaitanyapolipalli/sqoop_practice \
+--null-non-string -1 \
+--fields-terminated-by "\t" \
+--lines-terminated-by ":" \
+--m 1
+
+sqoop import \
+--connect jdbc:mysql://ms.itversity.com/retail_db \
+--username retail_user \
+--password itversity \
+--target-dir /user/chaitanyapolipalli/sqoop_practice/incremental \
+--table orders \
+--check-column order_date \
+--incremental append \
+--last-value '2014-02-28' \
+--m 1
+
+
+sqoop job --create test \
+-- import \
+--connect jdbc:mysql://ms.itversity.com/retail_export \
+--username retail_user \
+--password itversity \
+--table chait_sqoop_job_test \
+--target-dir /user/chaitanyapolipalli/sqoop_practice/products-incremental \
+--check-column ID \
+--incremental append \
+--last-value 0 \
+--m 1
+
+
+sqoop import \
+--connect jdbc:mysql://ms.itversity.com/retail_db \
+--username retail_user \
+--password itversity \
+--table order_items \
+--hive-import \
+--hive-database chaitanyapolipalli_daily_revenue \
+--hive-table order_items \
+--m 1
+
+sqoop import \
+--connect jdbc:mysql://ms.itversity.com/retail_db \
+--username retail_user \
+--password itversity \
+--table order_items \
+--hive-import \
+--hive-database chaitanyapolipalli_daily_revenue \
+--hive-table order_items \
+--hive-overwrite \
+--m 1
+
+sqoop import \
+--connect jdbc:mysql://ms.itversity.com/retail_db \
+--username retail_user \
+--password itversity \
+--table orders \
+--hive-import \
+--hive-database chaitanyapolipalli_daily_revenue \
+--hive-table orders \
+--hive-overwrite \
+--m 1
+
+
+sqoop export \
+--connect jdbc:mysql://ms.itversity.com/retail_export \
+--username retail_user \
+--password itversity \
+--export-dir /apps/hive/warehouse/chaitanyapolipalli_daily_revenue.db/daily_revenue \
+--table chaitanyapolipalli_sqoop_export \
+--input-fields-terminated-by '\001'
+
+
+sqoop export \
+--connect jdbc:mysql://ms.itversity.com/retail_export \
+--username retail_user \
+--password itversity \
+--export-dir /apps/hive/warehouse/chaitanyapolipalli_daily_revenue.db/daily_revenue \
+--table chaitanyapolipalli_sqoop_export_extra_columns \
+--columns date,revenue \
+--input-fields-terminated-by '\001'
+
+sqoop export \
+--connect jdbc:mysql://ms.itversity.com/retail_export \
+--username retail_user \
+--password itversity \
+--export-dir /apps/hive/warehouse/chaitanyapolipalli_daily_revenue.db/daily_revenue \
+--table chaitanyapolipalli_sqoop_export_extra_columns \
+--columns date,revenue \
+--update-key date \
+--update-mode allowinsert \
+--input-fields-terminated-by '\001' \
+--m 1
+
+1.
+
+sqoop import \
+--connect jdbc:mysql://ms.itversity.com/retail_export \
+--username retail_user \
+--password itversity \
+--table products_replica \
+--target-dir /user/chaitanyapolipalli/ArunBlogPractice/problem5/products-text \
+--fields-terminated-by '|' \
+--lines-terminated-by '\n' \
+--null-non-string -1 \
+--null-string "NOT-AVAILABLE" \
+--where "product_id between 1 and 1000" \
+--m 3
+
+2.
+
+sqoop import \
+--connect jdbc:mysql://ms.itversity.com/retail_export \
+--username retail_user \
+--password itversity \
+--table products_replica \
+--fields-terminated-by '*' \
+--lines-terminated-by '\n' \
+-null-non-string -1000 \
+-null-string "NA" \
+--where "product_id <= 1111" \
+-m 2 \
+--target-dir /user/chaitanyapolipalli/ArunBlogPractice/problem5/products-text-part1 \
+--outdir /home/chaitanyapolipalli/products-text-part1
+
+3.
+
+sqoop import \
+--connect jdbc:mysql://ms.itversity.com/retail_export \
+--username retail_user \
+--password itversity \
+--table products_replica \
+--fields-terminated-by '*' \
+--lines-terminated-by '\n' \
+-null-non-string -1000 \
+-null-string "NA" \
+--where "product_id > 1111" \
+-m 5 \
+--target-dir /user/chaitanyapolipalli/ArunBlogPractice/problem5/products-text-part2 \
+--outdir /home/chaitanyapolipalli/products-text-part2
+
+4.
+
+sqoop merge \
+--new-data /user/chaitanyapolipalli/ArunBlogPractice/problem5/products-text-part2 \
+--onto /user/chaitanyapolipalli/ArunBlogPractice/problem5/products-text-part1 \
+--target-dir /user/chaitanyapolipalli/ArunBlogPractice/problem5/products-text-both-parts \
+--merge-key product_id \
+--class-name products_replica \
+--jar-file /tmp/sqoop-chaitanyapolipalli/compile/616d6027deebae0070acb0e47faf413f/products_replica.jar
+
+
+5.
+
+sqoop job --create myfirstjob \
+-- import \
+--connect jdbc:mysql://ms.itversity.com/retail_export \
+--username retail_user \
+--password itversity \
+--table products_replica \
+--target-dir /user/chaitanyapolipalli/ArunBlogPractice/problem5/products-incremental \
+--check-column product_id \
+--incremental append \
+--last-value 0 \
+--m 1
+
+sqoop job --exec myfirstjob
+
+sqoop job --create mysecondjob \
+-- import \
+--connect jdbc:mysql://ms.itversity.com/retail_export \
+--username retail_user \
+--password itversity \
+--table products_replica \
+--incremental append \
+--last-value 0 \
+--check-column product_id \
+--hive-import \
+--hive-database chaitanyapolipalli_daily_revenue \
+--hive-table products_hive \
+--m 1
+
+sqoop export \
+--connect jdbc:mysql://ms.itversity.com/retail_export \
+--username retail_user \
+--password itversity \
+--export-dir /apps/hive/warehouse/chaitanyapolipalli_daily_revenue.db/products_hive \
+--table chaitanya_polipalli_products_external \
+--update-key product_id \
+--update-mode allowinsert \
+--input-fields-terminated-by '\001' \
+--input-null-non-string "null" \
+--input-null-string "null" \
+--columns product_id,product_category_id,product_name,product_description,product_price,product_impage,product_grade,product_sentiment \
+--m 3
+
+
